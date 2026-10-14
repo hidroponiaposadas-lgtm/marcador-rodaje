@@ -4,12 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b0d10">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Marcador">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Marcador de Rodaje · CRUDO</title>
 <style>
 /* Paleta en variables: cambiar acá para igualar la estética exacta de CRUDO Suite */
@@ -38,9 +37,18 @@ select,input{background:#0e1216;border:1px solid var(--line);border-radius:10px;
 #meter i{display:block;height:100%;width:0;background:var(--ok)}
 #cron{font:800 54px/1 var(--mono);text-align:center;color:var(--ok)}
 .sub{text-align:center;color:var(--mut);font-size:12px;margin-top:2px}
-#tl{position:relative;height:30px;margin:10px 0 8px;background:#0e1216;border:1px solid var(--line);border-radius:8px;overflow:hidden}
-#ph{position:absolute;top:0;bottom:0;width:2px;background:var(--ac)}
-.tk{position:absolute;top:4px;bottom:4px;width:4px;border-radius:2px;margin-left:-2px}
+#tl{position:relative;height:84px;margin:10px 0 8px;background:#0e1216;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+#wf{position:absolute;inset:0;width:100%;height:100%}
+#mks{position:absolute;inset:0}
+#ph{position:absolute;top:0;bottom:0;width:2px;background:var(--ac);z-index:2}
+.tk{position:absolute;top:0;bottom:0;width:3px;margin-left:-1px;opacity:.9;z-index:1}
+#alerta{background:var(--bad);color:#fff;font-weight:700;padding:10px;border-radius:10px;margin:8px 0;text-align:center}
+#aviso{background:#2a2410;border:1px solid var(--warn);color:var(--warn);padding:8px 10px;border-radius:10px;margin:8px 0;font-size:13px;font-weight:600}
+#rescate{background:#10261a;border:1px solid var(--ok);padding:10px;border-radius:10px;margin:8px 0}
+#rescate .row{display:flex;gap:8px;margin-top:8px}#rescate .row button{flex:1;padding:12px}
+#camShare button.ya,#camShare button.gris{background:#1a2029;color:var(--tx);border:1px solid var(--line);font-weight:600}
+#camShare{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+#camShare button{flex:1 1 auto;padding:14px 10px;font-size:15px;background:var(--ok);color:#04210f;border:0;border-radius:12px;font-weight:800}
 #quick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 #quick button{padding:26px 6px;font-size:20px;font-weight:800;border-radius:14px;border:0;color:#10131a}
 #quick [data-mk=CORTAR_FRASE]{background:#ff7a1a}
@@ -81,6 +89,8 @@ details summary{cursor:pointer;font-size:12px;letter-spacing:.6px}
 
 <div class="top"><span><b>CRUDO</b> · MARCADOR DE RODAJE</span><span id="prg"></span></div>
 <div id="clock">--:--:--</div>
+<div id="alerta" class="hide"></div>
+<div id="rescate" class="hide"></div>
 
 <div id="estado"></div>
 
@@ -90,7 +100,7 @@ details summary{cursor:pointer;font-size:12px;letter-spacing:.6px}
 </div>
 
 <div id="rec" class="hide">
-  <div id="tl"><div id="ph"></div></div>
+  <div id="tl"><canvas id="wf"></canvas><div id="mks"></div><div id="ph"></div></div>
   <div id="quick">
     <button data-mk="CORTAR_FRASE">✂ Cortar</button>
     <button data-mk="TAPAR_INSERT">🎞 Tapar</button>
@@ -102,6 +112,8 @@ details summary{cursor:pointer;font-size:12px;letter-spacing:.6px}
 </div>
 
 <h2><span id="regT">REGISTRO</span></h2>
+<div id="aviso" class="hide"></div>
+<div id="camShare"></div>
 <div id="reg"></div>
 
 <details>
@@ -111,6 +123,7 @@ details summary{cursor:pointer;font-size:12px;letter-spacing:.6px}
     <div><label>Fecha</label><input id="pFecha" type="date"></div>
     <div style="grid-column:1/3"><label>Programa</label><input id="pNom"></div>
     <div style="grid-column:1/3"><label>Sensibilidad de palmadas (más a la izquierda = detecta más suave)</label><input id="umbral" type="range" min="10" max="80" step="5"></div>
+    <div id="stInfo" class="sub" style="grid-column:1/3;text-align:left"></div>
     <button id="probar">Probar micrófono</button>
     <button id="borrar" style="color:var(--bad)">Borrar día</button>
   </div>
@@ -132,7 +145,7 @@ function fmt(s){s=Math.max(0,s);const m=Math.floor(s/60),x=s-m*60;return pad(m)+
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function toast(t){const e=$('toast');if(!e)return;e.textContent=t;e.style.display='block';clearTimeout(toast._t);toast._t=setTimeout(()=>e.style.display='none',2200)}
 
-let S={prog:{num:'',nom:'Nuestro Agro',fecha:hoy()},umbral:.35,extra:[],cam:'',tomas:[],seq:1,act:null,back:false};
+let S={prog:{num:'',nom:'Nuestro Agro',fecha:hoy()},umbral:.35,extra:[],cam:'',tomas:[],seq:1,act:null,back:false,rescate:null,respaldo:0};
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function load(){try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}}
 
@@ -155,8 +168,25 @@ const Det={on:[],last:0,armed:true,rms:0.01,
   }
 };
 
-/* ---------- Micrófono ---------- */
-let AC=null,AN=null,ST=null,LOOP=null;
+/* ---------- Micrófono, waveform y grabación ---------- */
+let AC=null,AN=null,ST=null,LOOP=null,CB=null,PK=[],PK0=0,REC=null,CH=[],RTYPE='',WL=null;
+const AUD={};
+function req(r){return new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('crudo_marcador',2);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('aud'))d.createObjectStore('aud');if(!d.objectStoreNames.contains('chk'))d.createObjectStore('chk')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function aPut(id,b){AUD[id]=b;try{const d=await idb();await req(d.transaction('aud','readwrite').objectStore('aud').put(b,id))}catch(e){}}
+async function aDel(id){delete AUD[id];try{const d=await idb();await req(d.transaction('aud','readwrite').objectStore('aud').delete(id))}catch(e){}}
+async function aClear(){for(const k in AUD)delete AUD[k];try{const d=await idb();await req(d.transaction('aud','readwrite').objectStore('aud').clear())}catch(e){}}
+async function aLoad(){try{const d=await idb();const ks=await req(d.transaction('aud').objectStore('aud').getAllKeys());for(const k of ks){AUD[k]=await req(d.transaction('aud').objectStore('aud').get(k))}}catch(e){}}
+/* trozos de audio guardados cada segundo, para recuperar una toma si la app se corta */
+async function cPut(rid,i,b){try{const d=await idb();d.transaction('chk','readwrite').objectStore('chk').put(b,[rid,i])}catch(e){}}
+async function cGet(rid){try{const d=await idb();return await req(d.transaction('chk').objectStore('chk').getAll(IDBKeyRange.bound([rid,0],[rid,Infinity])))}catch(e){return[]}}
+async function cDel(rid){try{const d=await idb();d.transaction('chk','readwrite').objectStore('chk').delete(IDBKeyRange.bound([rid,0],[rid,Infinity]))}catch(e){}}
+async function cClear(keep){try{const d=await idb();if(keep==null){d.transaction('chk','readwrite').objectStore('chk').clear();return}const ks=await req(d.transaction('chk').objectStore('chk').getAllKeys());const st=d.transaction('chk','readwrite').objectStore('chk');ks.forEach(k=>{if(k[0]!==keep)st.delete(k)})}catch(e){}}
+function kb(b){return b>=1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB'}
+function alerta(t){const e=$('alerta');if(!e)return;e.textContent=t||'';e.classList.toggle('hide',!t)}
+let WLP=false;async function wakeOn(){if(WLP)return;WLP=true;try{if(navigator.wakeLock&&!WL){WL=await navigator.wakeLock.request("screen");WL.addEventListener('release',()=>{WL=null})}}catch(e){}WLP=false}
+function wakeOff(){/* la pantalla queda encendida todo el tiempo que la app esté abierta */}
+
 async function micOn(){
   if(AN){try{if(AC.state==='suspended')await AC.resume()}catch(e){}return true}
   try{
@@ -164,28 +194,53 @@ async function micOn(){
     AC=new (window.AudioContext||window.webkitAudioContext)();
     const src=AC.createMediaStreamSource(ST);AN=AC.createAnalyser();AN.fftSize=1024;src.connect(AN);
     if(AC.state==='suspended')await AC.resume();
+    AC.onstatechange=()=>{if(!S.act)return;if(AC.state==='running')alerta('');else alerta('⚠ El audio quedó en pausa por el sistema')};
+    ST.getAudioTracks().forEach(tr=>{
+      tr.onended=()=>{if(LOOP){clearInterval(LOOP);LOOP=null}AN=null;ST=null;if(S.act)alerta('⚠ El micrófono se cortó. Tocá FIN TOMA y empezá otra toma.')};
+      tr.onmute=()=>{if(S.act)alerta('⚠ Micrófono silenciado por el sistema (llamada u otra app)')};
+      tr.onunmute=()=>{if(S.act)alerta('')};
+    });
     return true;
   }catch(e){return false}
 }
-function escuchar(cb){
-  pararEscucha();Det.reset();
+/* Un solo bucle: junta picos para la waveform durante toda la toma y, si hay CB, detecta las 3 palmadas */
+function bucle(){
+  if(LOOP||!AN)return;
   const buf=new Float32Array(1024);
   LOOP=setInterval(()=>{
     AN.getFloatTimeDomainData(buf);
     let p=0,s=0;for(let i=0;i<buf.length;i++){const a=Math.abs(buf[i]);if(a>p)p=a;s+=a*a}
+    const now=Date.now();
     const m=$('mtr');if(m)m.style.width=Math.min(100,p*100)+'%';
-    const r=Det.feed(p,Math.sqrt(s/buf.length),Date.now(),S.umbral);
-    pintarDots();
-    if(r){pararEscucha();cb(r)}
+    if(PK0){const i=Math.floor((now-PK0)/50);if(i>=0&&i<400000&&!(PK[i]>=p))PK[i]=p}
+    if(CB){const r=Det.feed(p,Math.sqrt(s/buf.length),now,S.umbral);pintarDots();if(r){const f=CB;CB=null;f(r)}}
   },8);
 }
-function pararEscucha(){if(LOOP){clearInterval(LOOP);LOOP=null}}
-
-/* ---------- Pantalla encendida (Wake Lock) ---------- */
-let WL=null;
-async function wakeOn(){try{if('wakeLock' in navigator&&!WL){WL=await navigator.wakeLock.request('screen');WL.addEventListener('release',()=>{WL=null})}}catch(e){}}
-function wakeOff(){try{if(WL)WL.release()}catch(e){}WL=null}
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.act)wakeOn()});
+function parar(){if(LOOP){clearInterval(LOOP);LOOP=null}CB=null;PK0=0}
+function recStart(){
+  try{
+    const tipos=['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];
+    RTYPE=tipos.find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
+    REC=new MediaRecorder(ST,RTYPE?{mimeType:RTYPE,audioBitsPerSecond:32000}:{audioBitsPerSecond:32000});
+    CH=[];const rid=S.act.pulsado;let ci=0;
+    REC.ondataavailable=e=>{
+      if(e.data&&e.data.size){
+        CH.push(e.data);cPut(rid,ci++,e.data);
+        if(S.act&&S.act.pulsado===rid){S.act.ult=Date.now();S.act.rtype=(REC&&REC.mimeType)||RTYPE;if(S.act.fase==='grabando')save()}
+      }
+    };
+    REC.start(1000);
+  }catch(e){REC=null}
+}
+function recStop(){
+  return new Promise(res=>{
+    if(!REC||REC.state==='inactive'){res(null);return}
+    const r=REC;
+    r.onstop=()=>{const b=new Blob(CH,{type:r.mimeType||RTYPE||'audio/webm'});REC=null;CH=[];res(b)};
+    try{r.stop()}catch(e){REC=null;res(null)}
+  });
+}
+function recCancel(){if(REC&&REC.state!=='inactive'){REC.onstop=null;try{REC.stop()}catch(e){}}REC=null;CH=[]}
 
 /* ---------- Flujo de toma ---------- */
 let TICK=null;
@@ -193,28 +248,48 @@ async function iniciar(){
   if(!S.cam){toast('Elegí el número de CAM');$('cam').focus();return}
   if(S.act)return;
   S.act={cam:S.cam,fase:'esperando',pulsado:Date.now(),claps:[],t0:null,metodo:null,mk:[]};
-  render();wakeOn();
+  alerta('');wakeOn();render();
   const ok=await micOn();
-  if(!ok){toast('Sin micrófono: usá "Palmada manual"');return}
+  if(!ok){toast('Sin micrófono: usá "Palmada manual" (no habrá audio)');return}
   if(!S.act||S.act.fase!=='esperando')return;
-  escuchar(r=>sincronizado(r,'audio'));
+  S.act.pulsado=Date.now();PK=[];PK0=S.act.pulsado;
+  recStart();Det.reset();CB=r=>sincronizado(r,'audio');bucle();
 }
 function sincronizado(claps,metodo){
-  if(!S.act)return;
+  if(!S.act||S.act.fase!=='esperando')return;
+  CB=null;
   S.act.claps=claps;S.act.t0=claps.length?claps[claps.length-1]:Date.now();S.act.metodo=metodo;S.act.fase='grabando';
   try{navigator.vibrate&&navigator.vibrate(120)}catch(e){}
   save();render();arrancarTick();
 }
 function manual(){sincronizado([],'manual')}
-function cancelar(){pararEscucha();wakeOff();S.act=null;save();render()}
+function cancelar(){const rid=S.act&&S.act.pulsado;parar();recCancel();wakeOff();alerta('');if(rid)cDel(rid);S.act=null;save();render()}
 function secs(){return (Date.now()-S.act.t0)/1000}
 function arrancarTick(){clearInterval(TICK);TICK=setInterval(tick,100);tick()}
+function dibujar(t,win){
+  const c=$('wf');if(!c)return;
+  const W=c.clientWidth,H=c.clientHeight,dpr=(typeof window!=='undefined'&&window.devicePixelRatio)||1;
+  if(!W||!H)return;
+  if(c.width!==Math.round(W*dpr)||c.height!==Math.round(H*dpr)){c.width=Math.round(W*dpr);c.height=Math.round(H*dpr)}
+  const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
+  const a=S.act;if(!a||!a.t0||!PK0)return;
+  const base=(a.t0-PK0)/50;
+  g.fillStyle='#2fbf71';
+  for(let x=0;x<W;x++){
+    const ts=x/W*win;if(ts>t)break;
+    const i0=Math.floor(base+ts*20);let i1=Math.floor(base+((x+1)/W*win)*20);if(i1<=i0)i1=i0+1;
+    let m=0;for(let j=Math.max(0,i0);j<i1;j++){const v=PK[j]||0;if(v>m)m=v}
+    const h=Math.max(1,Math.min(1,Math.sqrt(m)*1.4)*H*0.9);
+    g.fillRect(x,(H-h)/2,1,h);
+  }
+}
 function tick(){
   if(!S.act||S.act.fase!=='grabando'||!$('cron'))return;
   const t=secs();$('cron').textContent=fmt(t);
   const win=Math.max(60,t);
   $('ph').style.left=Math.min(100,t/win*100)+'%';
   document.querySelectorAll('.tk').forEach(e=>{e.style.left=(+e.dataset.t/win*100)+'%'});
+  dibujar(t,win);
 }
 function addMk(tipo){
   if(!S.act||S.act.fase!=='grabando')return;
@@ -224,23 +299,86 @@ function addMk(tipo){
   save();render();
 }
 function nombre(cam,n){return (S.prog.num||'PROG')+'_CAM'+cam+'_T'+pad(n)}
-function finalizar(){
-  const a=S.act;if(!a||a.fase!=='grabando')return;
-  clearInterval(TICK);wakeOff();
-  const dur=secs();
+function armarToma(a,dur,id){
   const n=S.tomas.filter(t=>t.cam===a.cam).length+1;
-  const toma={id:S.seq++,cam:a.cam,n,nombre:nombre(a.cam,n),estado:'aprobada',
+  const t={id,cam:a.cam,n,nombre:nombre(a.cam,n),estado:'aprobada',
     inicio:isoLocal(new Date(a.t0)),pulsado:isoLocal(new Date(a.pulsado)),
     sincro:a.metodo,palmadas_seg:a.claps.map(c=>+((c-a.t0)/1000).toFixed(3)),
     duracion_seg:+dur.toFixed(2),
     marcadores:a.mk.slice().sort((x,y)=>x.t-y.t).map(m=>{const r={t_seg:m.t,tipo:m.tipo,detalle:m.detalle||''};if(m.accion)r.accion=m.accion;return r})};
+  if(a.huecos&&a.huecos.length)t.huecos=a.huecos;
+  return t;
+}
+function adjuntar(t,blob,a){
+  const ext=/mp4/.test(blob.type)?'m4a':/ogg/.test(blob.type)?'ogg':'webm';
+  t.audio={archivo:t.nombre+'.'+ext,ext,tipo:blob.type,bytes:blob.size,offset_seg:+((a.t0-a.pulsado)/1000).toFixed(3)};
+}
+async function finalizar(){
+  const a=S.act;if(!a||a.fase!=='grabando')return;
+  a.fase='cerrando';clearInterval(TICK);
+  const dur=secs(),id=S.seq++;
+  const toma=armarToma(a,dur,id);
+  const blob=await recStop();
+  if(blob&&blob.size>0){adjuntar(toma,blob,a);await aPut(id,blob);cDel(a.pulsado)}
+  parar();wakeOff();alerta('');
   S.tomas.push(toma);S.act=null;S.back=false;save();render();aprobada(toma);
 }
 function aprobada(t){
   const o=$('ok');if(!o)return;
-  $('okInfo').textContent=t.nombre+' · '+fmt(t.duracion_seg);
+  $('okInfo').textContent=t.nombre+' · '+fmt(t.duracion_seg)+(t.audio?' · audio '+kb(t.audio.bytes):' · sin audio');
   o.style.display='flex';clearTimeout(aprobada._t);aprobada._t=setTimeout(()=>o.style.display='none',1800);
   try{navigator.vibrate&&navigator.vibrate([80,60,80])}catch(e){}
+}
+/* ---------- Rescate de toma interrumpida ---------- */
+async function recuperar(){
+  const a=S.rescate;if(!a)return;
+  const parts=await cGet(a.pulsado);
+  const dur=Math.max(0,((a.ult||a.t0)-a.t0)/1000),id=S.seq++;
+  const toma=armarToma(a,dur,id);toma.recuperada=true;
+  if(parts.length){const blob=new Blob(parts,{type:a.rtype||'audio/webm'});if(blob.size>0){adjuntar(toma,blob,a);await aPut(id,blob)}}
+  await cDel(a.pulsado);
+  S.tomas.push(toma);S.rescate=null;save();render();toast('Toma recuperada: '+toma.nombre);
+}
+async function descartarRescate(){
+  if(!S.rescate)return;
+  if(!confirm('¿Descartar el audio y los marcadores de la toma interrumpida? No se puede deshacer.'))return;
+  await cDel(S.rescate.pulsado);S.rescate=null;save();render();
+}
+/* ---------- Envío y respaldo ---------- */
+function pendientes(){return S.tomas.filter(t=>t.audio&&!t.enviada&&t.estado==='aprobada')}
+function descargar(files){files.forEach((f,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();a.remove()},i*400))}
+function archivoDe(t){return new File([AUD[t.id]],t.audio.archivo,{type:(t.audio.tipo||'audio/mp4').split(';')[0]})}
+async function compartirCam(cam){
+  const ts=S.tomas.filter(t=>t.cam===cam&&t.estado==='aprobada'&&t.audio&&AUD[t.id]).sort((x,y)=>x.n-y.n);
+  if(!ts.length)return toast('No hay audios aprobados de esta CAM');
+  const files=ts.map(archivoDe);
+  try{
+    if(navigator.canShare&&navigator.canShare({files})){
+      await navigator.share({files,title:'CAM '+cam+(S.prog.num?' · '+S.prog.num:'')});
+      ts.forEach(t=>t.enviada=true);save();render();return;
+    }
+  }catch(e){if(e&&e.name==='AbortError')return}
+  descargar(files);ts.forEach(t=>t.enviada=true);save();render();
+  toast('Descargados '+files.length+' audios de CAM '+cam);
+}
+async function respaldo(){
+  const ts=S.tomas.filter(t=>t.audio&&AUD[t.id]);
+  const files=ts.map(archivoDe);
+  files.push(new File([JSON.stringify(build(),null,2)],nombreArchivo(),{type:'application/json'}));
+  try{
+    if(navigator.canShare&&navigator.canShare({files})){
+      await navigator.share({files,title:'Respaldo '+(S.prog.num||'')});
+      S.respaldo=Date.now();save();render();return;
+    }
+  }catch(e){if(e&&e.name==='AbortError')return}
+  descargar(files);S.respaldo=Date.now();save();render();
+  toast('Respaldo descargado ('+files.length+' archivos)');
+}
+async function stInfo(){
+  const e=$('stInfo');if(!e)return;
+  let p=false;try{p=await navigator.storage.persisted()}catch(x){}
+  const sa=!!(navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches));
+  e.innerHTML='Almacenamiento permanente: <b>'+(p?'sí':'no')+'</b> · Abierta desde el ícono: <b>'+(sa?'sí':'no')+'</b>'+((!p||!sa)?'<br>Para no perder audios, abrí siempre la app desde el ícono de la pantalla de inicio.':'');
 }
 
 /* ---------- Render ---------- */
@@ -273,13 +411,20 @@ function render(){
   if(a&&a.fase==='grabando'){
     document.querySelectorAll('#quick [data-mk]').forEach(b=>b.classList.remove('sel'));
     $('back').classList.toggle('sel',!!S.back);
-    $('tl').innerHTML='<div id="ph"></div>'+a.mk.map(m=>`<i class="tk" data-t="${m.t}" style="background:${TIPOS[m.tipo].c}"></i>`).join('');
+    $('mks').innerHTML=a.mk.map(m=>`<i class="tk" data-t="${m.t}" style="background:${TIPOS[m.tipo].c}"></i>`).join('');
     $('mkl').innerHTML=a.mk.slice().reverse().map(m=>`<div class="mk" data-id="${m.id}"><span class="t">${fmt(m.t)}</span><span style="display:flex;gap:4px;align-items:center"><span class="chip" style="background:${TIPOS[m.tipo].c}">${TIPOS[m.tipo].n}</span>${m.tipo==='CORTAR_FRASE'?`<select data-acc="${m.id}" style="width:auto;padding:6px"><option value="quitar"${m.accion==='quitar'?' selected':''}>quitar</option><option value="conservar"${m.accion==='conservar'?' selected':''}>dejar</option></select>`:''}<input data-det="${m.id}" value="${esc(m.detalle)}" placeholder="${esc(TIPOS[m.tipo].ph)}"></span><button class="x" data-del="${m.id}">✕</button></div>`).join('');
     tick();
   }
+  const cams={};S.tomas.forEach(t=>{if(t.estado==='aprobada'&&t.audio&&AUD[t.id])(cams[t.cam]=cams[t.cam]||[]).push(t)});
+  const hayAud=S.tomas.some(t=>t.audio&&AUD[t.id]);
+  $('camShare').innerHTML=Object.keys(cams).sort((x,y)=>x-y).map(c=>{const l=cams[c],pend=l.filter(t=>!t.enviada).length;return `<button data-share="${c}" class="${pend?'':'ya'}">${pend?'📤':'✓'} CAM ${c} · ${l.length} audio${l.length>1?'s':''} · ${kb(l.reduce((s,t)=>s+t.audio.bytes,0))}${pend?'':' · enviada'}</button>`}).join('')+(hayAud?'<button data-respaldo class="gris">🛟 Respaldo (todo)</button>':'');
+  const pend=pendientes(),av=$('aviso');
+  if(pend.length&&!S.act){const m=S.respaldo?Math.round((Date.now()-S.respaldo)/60000):null;av.textContent='⚠ '+pend.length+' audio'+(pend.length>1?'s':'')+' sin enviar · respaldo: '+(m==null?'nunca':'hace '+m+' min');av.classList.remove('hide')}else av.classList.add('hide');
+  const rs=$('rescate');
+  if(S.rescate){const r=S.rescate;rs.classList.remove('hide');rs.innerHTML=`<b>♻ Toma interrumpida · CAM ${esc(r.cam)}</b><div class="sub" style="text-align:left">Se cortó la app en plena toma (hasta ${fmt(Math.max(0,((r.ult||r.t0)-r.t0)/1000))}). El audio y los marcadores se pueden recuperar.</div><div class="row"><button data-rec>♻ Recuperar</button><button data-nores class="bad">Descartar</button></div>`}else rs.classList.add('hide');
   const ts=S.tomas.slice().reverse();
   $('regT').textContent='REGISTRO · '+S.tomas.filter(t=>t.estado==='aprobada').length+' aprobadas de '+S.tomas.length;
-  $('reg').innerHTML=ts.length?ts.map(t=>`<div class="reg${t.estado==='aprobada'?'':' no'}"><div><span class="n">${esc(t.nombre)}</span><div class="m">${fmt(t.duracion_seg)} · ${t.marcadores.length} marc. · sync ${t.sincro}</div></div><button data-est="${t.id}" class="${t.estado==='aprobada'?'a':''}">${t.estado==='aprobada'?'✔':'✖'}</button><button class="d" data-delt="${t.id}">✕</button></div>`).join(''):'<div class="sub" style="text-align:left">Todavía no hay tomas.</div>';
+  $('reg').innerHTML=ts.length?ts.map(t=>`<div class="reg${t.estado==='aprobada'?'':' no'}"><div><span class="n">${esc(t.nombre)}</span><div class="m">${fmt(t.duracion_seg)} · ${t.marcadores.length} marc. · sync ${t.sincro} · ${t.audio?kb(t.audio.bytes):'sin audio'}${t.enviada?' · ✓ enviada':''}${t.huecos?' · ⚠ hueco':''}${t.recuperada?' · ♻':''}</div></div><button data-est="${t.id}" class="${t.estado==='aprobada'?'a':''}">${t.estado==='aprobada'?'✔':'✖'}</button><button class="d" data-delt="${t.id}">✕</button></div>`).join(''):'<div class="sub" style="text-align:left">Todavía no hay tomas.</div>';
   $('pNum').value=S.prog.num;$('pFecha').value=S.prog.fecha;$('pNom').value=S.prog.nom;$('umbral').value=Math.round(S.umbral*100);
 }
 
@@ -288,7 +433,7 @@ function build(){
   const d=new Date();
   return {formato:'crudo-tomas',version:2,generado:isoLocal(d),zona_horaria_min:-d.getTimezoneOffset(),
     programa:{numero:S.prog.num,nombre:S.prog.nom,fecha:S.prog.fecha},
-    nota:'t_seg y palmadas_seg se miden desde la 3ª palmada (t=0). inicio = hora de pared de esa palmada.',
+    nota:'t_seg y palmadas_seg se miden desde la 3ª palmada (t=0). inicio = hora de pared de esa palmada. audio.offset_seg = segundos desde el inicio del archivo de audio hasta la 3ª palmada.',
     tomas:S.tomas};
 }
 function nombreArchivo(){return 'tomas_'+(S.prog.fecha||hoy())+'_'+((S.prog.num||'prog').replace(/[^\w-]/g,''))+'.json'}
@@ -310,14 +455,23 @@ if(typeof document!=='undefined'&&$('go')){
     if(b.id==='back'){S.back=!S.back;return render()}
     if(b.dataset.del){S.act.mk=S.act.mk.filter(m=>m.id!=b.dataset.del);save();return render()}
     if(b.dataset.est){const t=S.tomas.find(x=>x.id==b.dataset.est);if(t){t.estado=t.estado==='aprobada'?'descartada':'aprobada';save();render()}return}
-    if(b.dataset.delt){if(confirm('¿Borrar esta toma del registro?')){S.tomas=S.tomas.filter(x=>x.id!=b.dataset.delt);save();render()}return}
+    if(b.dataset.share)return compartirCam(b.dataset.share);
+    if(b.dataset.respaldo!==undefined)return respaldo();
+    if(b.dataset.rec!==undefined)return recuperar();
+    if(b.dataset.nores!==undefined)return descartarRescate();
+    if(b.dataset.delt){if(confirm((()=>{const tt=S.tomas.find(x=>x.id==b.dataset.delt);return tt&&tt.audio&&!tt.enviada?'Esta toma tiene audio SIN ENVIAR. ¿Borrar igual?':'¿Borrar esta toma del registro?'})())){aDel(+b.dataset.delt);S.tomas=S.tomas.filter(x=>x.id!=b.dataset.delt);save();render()}return}
     if(b.id==='exportar')return exportar();
     if(b.id==='copiar')return copiar();
-    if(b.id==='borrar'){if(confirm('¿Borrar todas las tomas del día?')){S.tomas=[];S.act=null;pararEscucha();clearInterval(TICK);save();render()}return}
+    if(b.id==='borrar'){
+      const p=pendientes().length;
+      const ok=p?((prompt('⚠ Hay '+p+' audio(s) sin enviar. Si querés borrar igual, escribí BORRAR')||'').trim().toUpperCase()==='BORRAR'):confirm('¿Borrar todas las tomas del día?');
+      if(ok){S.tomas=[];S.act=null;S.rescate=null;S.respaldo=0;parar();recCancel();wakeOff();alerta('');aClear();cClear();clearInterval(TICK);save();render()}
+      return}
     if(b.id==='probar'){
+      if(S.act)return toast('Terminá la toma primero');
       micOn().then(ok=>{if(!ok)return toast('No hay permiso de micrófono');
-        if(LOOP){pararEscucha();return toast('Prueba detenida')}
-        toast('Aplaudí 3 veces…');escuchar(()=>toast('✔ 3 palmadas detectadas'))});return}
+        if(LOOP){parar();return toast('Prueba detenida')}
+        toast('Aplaudí 3 veces…');Det.reset();CB=()=>{parar();toast('✔ 3 palmadas detectadas')};bucle()});return}
   });
   document.addEventListener('change',e=>{
     const t=e.target;
@@ -327,6 +481,21 @@ if(typeof document!=='undefined'&&$('go')){
       save();render();return}
     if(t.dataset.acc&&S.act){const m=S.act.mk.find(x=>x.id==t.dataset.acc);if(m){m.accion=t.value;save()}}
   });
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)wakeOn();
+    if(!S.act)return;
+    if(document.hidden){S.act.oculto=Date.now();save();return}
+    wakeOn();
+    try{if(AC&&AC.state!=='running')AC.resume()}catch(e){}
+    try{if(REC&&REC.state==='paused')REC.resume()}catch(e){}
+    if(S.act.oculto){
+      const d=(Date.now()-S.act.oculto)/1000;
+      (S.act.huecos=S.act.huecos||[]).push({t_seg:+((S.act.oculto-(S.act.t0||S.act.oculto))/1000).toFixed(2),dur_seg:+d.toFixed(1)});
+      S.act.oculto=null;save();
+      if(d>1)alerta('⚠ La app estuvo en segundo plano '+Math.round(d)+' s: puede faltar audio ahí');
+    }
+  });
+  window.addEventListener('beforeunload',e=>{if(S.act||pendientes().length){e.preventDefault();e.returnValue=''}});
   document.addEventListener('input',e=>{
     const t=e.target;
     if(t.dataset.det&&S.act){const m=S.act.mk.find(x=>x.id==t.dataset.det);if(m){m.detalle=t.value;save()}return}
@@ -337,10 +506,14 @@ if(typeof document!=='undefined'&&$('go')){
     else return;
     save();$('prg').textContent=(S.prog.num?'Nº '+S.prog.num+' · ':'')+S.prog.fecha;
   });
+  ['pointerdown','touchstart','click'].forEach(ev=>document.addEventListener(ev,()=>{if(!WL)wakeOn()},{passive:true}));
+  wakeOn();
   load();
-  if(S.act&&S.act.fase==='esperando')S.act=null;
+  const viejo=S.act;
+  if(viejo){S.act=null;if(viejo.t0)S.rescate=viejo;save()}
   render();
-  if(S.act&&S.act.fase==='grabando')arrancarTick();
+  aLoad().then(()=>cClear(S.rescate?S.rescate.pulsado:null)).then(render);
+  stInfo();try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist().then(stInfo)}catch(e){}
   setInterval(()=>{const d=new Date();$('clock').textContent=pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds())},250);
 }
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
