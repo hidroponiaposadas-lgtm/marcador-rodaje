@@ -104,6 +104,11 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--a
 #ok span{font:600 18px var(--mono);margin-top:10px}
 #toast{position:fixed;left:50%;top:max(12px,env(safe-area-inset-top));transform:translateX(-50%);background:rgba(20,17,16,.95);border:1px solid rgba(var(--acRGB),.6);padding:10px 16px;border-radius:12px;z-index:30;display:none;max-width:88%;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
 .hide{display:none!important}
+#nubeEst{font-size:12.5px;font-weight:650;margin:6px 0 2px;color:var(--mut)}
+#nubeEst.ok{color:var(--ok)}#nubeEst.pend{color:var(--warn)}#nubeEst.err{color:#ffb3aa}
+.nb{grid-column:1/3;border-top:1px solid var(--line);padding-top:12px;margin-top:4px}
+.nb .t{font-size:11px;letter-spacing:.14em;font-weight:800;color:var(--tx2)}
+#nubeOn.on{background:rgba(var(--okRGB),.15);border-color:rgba(var(--okRGB),.6);color:var(--ok)}
 /* ----- vúmetro al costado: siempre a la vista, tocalo para activar el micrófono ----- */
 #vu{position:fixed;z-index:9;right:max(6px,env(safe-area-inset-right));top:calc(max(10px,env(safe-area-inset-top)) + 60px);bottom:calc(84px + env(safe-area-inset-bottom));
   width:var(--vu);padding:0;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -153,6 +158,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--a
 
 <h2><span id="regT">REGISTRO</span></h2>
 <div id="aviso" class="hide"></div>
+<div id="nubeEst" class="hide"></div>
 <div id="camShare"></div>
 <div id="reg"></div>
 
@@ -164,7 +170,14 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--a
     <div style="grid-column:1/3"><label>Programa</label><input id="pNom"></div>
     <div style="grid-column:1/3"><label>Sensibilidad de palmadas (más a la izquierda = detecta más suave)</label><input id="umbral" type="range" min="10" max="80" step="5"></div>
     <div id="stInfo" class="sub" style="grid-column:1/3;text-align:left"></div>
-    <div class="sub" style="grid-column:1/3;text-align:left">La línea punteada del vúmetro (MIC, a la derecha) es la sensibilidad: una palmada tiene que pasarla. Versión 3.1</div>
+    <div class="sub" style="grid-column:1/3;text-align:left">La línea punteada del vúmetro (MIC, a la derecha) es la sensibilidad: una palmada tiene que pasarla. Versión 3.2</div>
+    <div class="nb"><div class="t">SUBIDA AUTOMÁTICA AL DRIVE (CRUDO › cola)</div>
+      <div class="sub" style="text-align:left">Cada toma se sube sola al terminarla (tomas + audio). Sin señal queda pendiente y se sube cuando vuelve internet.</div></div>
+    <div style="grid-column:1/3"><label>Enlace del script (termina en /exec)</label><input id="nUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <div><label>Clave</label><input id="nClave" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <div style="display:flex;align-items:flex-end;gap:8px"><button id="nubeOn" style="flex:1">Apagada</button></div>
+    <button id="nubeProbar">Probar conexión</button>
+    <button id="nubeYa">Subir ahora</button>
     <button id="probar">Probar palmadas</button>
     <button id="borrar" style="color:var(--bad)">Borrar día</button>
   </div>
@@ -186,14 +199,14 @@ function fmt(s){s=Math.max(0,s);const m=Math.floor(s/60),x=s-m*60;return pad(m)+
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function toast(t){const e=$('toast');if(!e)return;e.textContent=t;e.style.display='block';clearTimeout(toast._t);toast._t=setTimeout(()=>e.style.display='none',2200)}
 
-let S={prog:{num:'',nom:'Nuestro Agro',fecha:hoy()},umbral:.35,extra:[],extraEsc:[],esc:'1',cam:'',tomas:[],seq:1,act:null,back:false,rescate:null,respaldo:0};
+let S={prog:{num:'',nom:'Nuestro Agro',fecha:hoy()},nube:{url:'',clave:'',on:false},nubeHash:'',umbral:.35,extra:[],extraEsc:[],esc:'1',cam:'',tomas:[],seq:1,act:null,back:false,rescate:null,respaldo:0};
 /* Escena 1 · CAM 1 · T03. La CAM es opcional: con una sola cámara queda «Escena 1 · T03».
    La toma se cuenta por escena (y por cámara si hay): Escena 2 arranca en T01. */
 function etiqueta(esc,cam){return (esc?'Escena '+esc:'')+(cam?(esc?' · ':'')+'CAM '+cam:'')}
 function grupo(t,esc,cam){return String(t.escena||'')===String(esc||'')&&String(t.cam||'')===String(cam||'')}
 function proxN(esc,cam){return S.tomas.filter(t=>grupo(t,esc,cam)).length+1}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-function load(){try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}}
+function load(){try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}S.nube=Object.assign({url:'',clave:'',on:false},S.nube||{})}
 
 /* ---------- Detector de 3 palmadas (puro, testeable) ---------- */
 const Det={on:[],last:0,armed:true,rms:0.01,
@@ -314,11 +327,15 @@ function bucle(){
   },8);
 }
 function parar(){CB=null;PK0=0}   /* el bucle sigue: el vúmetro queda andando mientras el micrófono esté abierto */
-function recStart(){
+function recStart(desde){
   try{
     const tipos=['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];
-    RTYPE=tipos.find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
+    const quedan=tipos.slice(desde||0).filter(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t));
+    RTYPE=quedan[0]||'';
     REC=new MediaRecorder(ST,RTYPE?{mimeType:RTYPE,audioBitsPerSecond:32000}:{audioBitsPerSecond:32000});
+    /* si este formato falla al arrancar (la grabadora se apaga sola), se prueba el siguiente: nunca quedarse sin audio */
+    const sig=RTYPE?tipos.indexOf(RTYPE)+1:tipos.length;
+    REC.onerror=()=>{if(S.act&&!CH.length&&sig<tipos.length){REC=null;recStart(sig)}};
     CH=[];const rid=S.act.pulsado;let ci=0;
     REC.ondataavailable=e=>{
       if(e.data&&e.data.size){
@@ -420,7 +437,7 @@ async function finalizar(){
   const blob=await recStop();
   if(blob&&blob.size>0){adjuntar(toma,blob,a);await aPut(id,blob);cDel(a.pulsado)}
   parar();wakeOff();alerta('');
-  S.tomas.push(toma);S.act=null;S.back=false;save();render();aprobada(toma);
+  S.tomas.push(toma);S.act=null;S.back=false;save();render();aprobada(toma);setTimeout(nubeSubir,400);
 }
 function aprobada(t){
   const o=$('ok');if(!o)return;
@@ -436,7 +453,7 @@ async function recuperar(){
   const toma=armarToma(a,dur,id);toma.recuperada=true;
   if(parts.length){const blob=new Blob(parts,{type:a.rtype||'audio/webm'});if(blob.size>0){adjuntar(toma,blob,a);await aPut(id,blob)}}
   await cDel(a.pulsado);
-  S.tomas.push(toma);S.rescate=null;save();render();toast('Toma recuperada: '+toma.nombre);
+  S.tomas.push(toma);S.rescate=null;save();render();toast('Toma recuperada: '+toma.nombre);setTimeout(nubeSubir,400);
 }
 async function descartarRescate(){
   if(!S.rescate)return;
@@ -444,7 +461,49 @@ async function descartarRescate(){
   await cDel(S.rescate.pulsado);S.rescate=null;save();render();
 }
 /* ---------- Envío y respaldo ---------- */
-function pendientes(){return S.tomas.filter(t=>t.audio&&!t.enviada&&t.estado==='aprobada')}
+function pendientes(){return S.tomas.filter(t=>t.audio&&!t.enviada&&!t.subida&&t.estado==='aprobada')}
+/* ---------- Subida automática al Drive (script de Google en tu cuenta) ---------- */
+const NUBE={busy:false,err:'',ult:0};
+function nubeLista(){return !!(S.nube&&S.nube.on&&/^https:\/\/script\.google(usercontent)?\.com\//.test(S.nube.url||'')&&S.nube.clave)}
+function hashTxt(t){let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return String(h>>>0)}
+function b64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]||'');r.onerror=()=>rej(r.error);r.readAsDataURL(blob)})}
+async function nubePost(d){
+  let r;
+  try{r=await fetch(S.nube.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({clave:S.nube.clave},d)),redirect:'follow'})}
+  catch(e){throw new Error('sin señal')}
+  if(!r.ok)throw new Error('el Drive no contestó (error '+r.status+')');
+  let j=null;try{j=await r.json()}catch(e){throw new Error('El script no contestó bien (¿está implementado para «Cualquier usuario»?)')}
+  if(!j.ok)throw new Error(j.error||'error del script');return j;
+}
+function datosJson(){return JSON.stringify({p:S.prog,t:S.tomas.map(t=>Object.assign({},t,{subida:undefined,enviada:undefined}))})}
+function nubeFalta(){
+  if(!nubeLista())return 0;
+  return S.tomas.filter(t=>t.audio&&AUD[t.id]&&!t.subida).length+(S.tomas.length&&S.nubeHash!==hashTxt(datosJson())?1:0);
+}
+async function nubeSubir(){
+  if(NUBE.busy||!nubeLista())return;
+  if(navigator.onLine===false){NUBE.err='sin señal';pintarNube();return}
+  NUBE.busy=true;pintarNube();
+  try{
+    for(const t of S.tomas.filter(t=>t.audio&&AUD[t.id]&&!t.subida)){        // primero los audios
+      await nubePost({archivos:[{nombre:t.audio.archivo,sub:'audios',tipo:(t.audio.tipo||'audio/mp4').split(';')[0],b64:await b64(AUD[t.id])}]});
+      t.subida=true;save();render();
+    }
+    const h=hashTxt(datosJson());                                             // después el archivo de tomas (se reemplaza)
+    if(S.tomas.length&&S.nubeHash!==h){await nubePost({archivos:[{nombre:nombreArchivo(),tipo:'application/json',texto:JSON.stringify(build(),null,2)}]});S.nubeHash=h;save()}
+    NUBE.err='';NUBE.ult=Date.now();
+  }catch(e){NUBE.err=(e&&e.message)||'no se pudo subir'}
+  NUBE.busy=false;pintarNube();render();
+}
+function pintarNube(){
+  const e=$('nubeEst');if(!e)return;
+  if(!nubeLista()){e.className='hide';return}
+  const f=nubeFalta();
+  e.className=NUBE.busy?'pend':NUBE.err?'err':f?'pend':'ok';
+  e.textContent=NUBE.busy?'☁ Subiendo al Drive…':NUBE.err?('⚠ No se pudo subir ('+NUBE.err+') · '+f+' pendiente'+(f!==1?'s':'')+' · reintenta solo'):
+    f?('⏳ '+f+' pendiente'+(f!==1?'s':'')+' de subir'):('☁ Todo subido al Drive'+(NUBE.ult?' · '+new Date(NUBE.ult).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):''));
+  const b=$('nubeOn');if(b){b.textContent=S.nube.on?'Prendida':'Apagada';b.classList.toggle('on',!!S.nube.on)}
+}
 function descargar(files){files.forEach((f,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();a.remove()},i*400))}
 function archivoDe(t){return new File([AUD[t.id]],t.audio.archivo,{type:(t.audio.tipo||'audio/mp4').split(';')[0]})}
 async function compartirCam(cam){
@@ -533,7 +592,8 @@ function render(){
   if(S.rescate){const r=S.rescate;rs.classList.remove('hide');rs.innerHTML=`<b>♻ Toma interrumpida · ${esc(etiqueta(r.esc,r.cam))}</b><div class="sub" style="text-align:left">Se cortó la app en plena toma (hasta ${fmt(Math.max(0,((r.ult||r.t0)-r.t0)/1000))}). El audio y los marcadores se pueden recuperar.</div><div class="row"><button data-rec>♻ Recuperar</button><button data-nores class="bad">Descartar</button></div>`}else rs.classList.add('hide');
   const ts=S.tomas.slice().reverse();
   $('regT').textContent='REGISTRO · '+S.tomas.filter(t=>t.estado==='aprobada').length+' aprobadas de '+S.tomas.length;
-  $('reg').innerHTML=ts.length?ts.map(t=>`<div class="reg${t.estado==='aprobada'?'':' no'}"><div><span class="n">${esc(t.nombre)}</span><div class="m">${fmt(t.duracion_seg)} · ${t.marcadores.length} marc. · sync ${t.sincro} · ${t.audio?kb(t.audio.bytes):'sin audio'}${t.enviada?' · ✓ enviada':''}${t.huecos?' · ⚠ hueco':''}${t.recuperada?' · ♻':''}</div></div><button data-est="${t.id}" class="${t.estado==='aprobada'?'a':''}">${t.estado==='aprobada'?'✔':'✖'}</button><button class="d" data-delt="${t.id}">✕</button></div>`).join(''):'<div class="sub" style="text-align:left">Todavía no hay tomas.</div>';
+  $('reg').innerHTML=ts.length?ts.map(t=>`<div class="reg${t.estado==='aprobada'?'':' no'}"><div><span class="n">${esc(t.nombre)}</span><div class="m">${fmt(t.duracion_seg)} · ${t.marcadores.length} marc. · sync ${t.sincro} · ${t.audio?kb(t.audio.bytes):'sin audio'}${t.enviada?' · ✓ enviada':''}${nubeLista()&&t.audio?(t.subida?' · ☁':' · ⏳'):''}${t.huecos?' · ⚠ hueco':''}${t.recuperada?' · ♻':''}</div></div><button data-est="${t.id}" class="${t.estado==='aprobada'?'a':''}">${t.estado==='aprobada'?'✔':'✖'}</button><button class="d" data-delt="${t.id}">✕</button></div>`).join(''):'<div class="sub" style="text-align:left">Todavía no hay tomas.</div>';
+  if(document.activeElement!==$('nUrl'))$('nUrl').value=S.nube.url||'';if(document.activeElement!==$('nClave'))$('nClave').value=S.nube.clave||'';pintarNube();
   $('pNum').value=S.prog.num;$('pFecha').value=S.prog.fecha;$('pNom').value=S.prog.nom;$('umbral').value=Math.round(S.umbral*100);
 }
 
@@ -565,12 +625,16 @@ if(typeof document!=='undefined'&&$('go')){
     if(b.dataset.mk)return addMk(b.dataset.mk);
     if(b.id==='back'){S.back=!S.back;return render()}
     if(b.dataset.del){S.act.mk=S.act.mk.filter(m=>m.id!=b.dataset.del);save();return render()}
-    if(b.dataset.est){const t=S.tomas.find(x=>x.id==b.dataset.est);if(t){t.estado=t.estado==='aprobada'?'descartada':'aprobada';save();render()}return}
+    if(b.dataset.est){const t=S.tomas.find(x=>x.id==b.dataset.est);if(t){t.estado=t.estado==='aprobada'?'descartada':'aprobada';save();render();setTimeout(nubeSubir,400)}return}
     if(b.dataset.share)return compartirCam(b.dataset.share);
     if(b.dataset.respaldo!==undefined)return respaldo();
     if(b.dataset.rec!==undefined)return recuperar();
     if(b.dataset.nores!==undefined)return descartarRescate();
     if(b.dataset.delt){if(confirm((()=>{const tt=S.tomas.find(x=>x.id==b.dataset.delt);return tt&&tt.audio&&!tt.enviada?'Esta toma tiene audio SIN ENVIAR. ¿Borrar igual?':'¿Borrar esta toma del registro?'})())){aDel(+b.dataset.delt);S.tomas=S.tomas.filter(x=>x.id!=b.dataset.delt);save();render()}return}
+    if(b.id==='nubeOn'){S.nube.on=!S.nube.on;save();pintarNube();if(S.nube.on){if(!nubeLista())toast('Pegá el enlace del script y la clave');else nubeSubir()}return}
+    if(b.id==='nubeProbar'){if(!S.nube.url||!S.nube.clave)return toast('Pegá el enlace del script y la clave');
+      nubePost({ping:true}).then(j=>toast('✔ Conectado: guarda en '+(j.carpeta||'CRUDO › cola'))).catch(e=>toast('✖ '+e.message));return}
+    if(b.id==='nubeYa'){if(!nubeLista())return toast('Prendé la subida automática primero');S.nubeHash='';nubeSubir();return}
     if(b.id==='exportar')return exportar();
     if(b.id==='copiar')return copiar();
     if(b.id==='borrar'){
@@ -614,6 +678,8 @@ if(typeof document!=='undefined'&&$('go')){
   document.addEventListener('input',e=>{
     const t=e.target;
     if(t.dataset.det&&S.act){const m=S.act.mk.find(x=>x.id==t.dataset.det);if(m){m.detalle=t.value;save()}return}
+    if(t.id==='nUrl'){S.nube.url=t.value.trim();save();pintarNube();return}
+    if(t.id==='nClave'){S.nube.clave=t.value.trim();save();pintarNube();return}
     if(t.id==='pNum')S.prog.num=t.value.trim();
     else if(t.id==='pFecha')S.prog.fecha=t.value;
     else if(t.id==='pNom')S.prog.nom=t.value;
@@ -629,6 +695,9 @@ if(typeof document!=='undefined'&&$('go')){
   /* si el permiso ya estaba dado, el vúmetro arranca solo (el primer toque lo reanuda si iOS lo dejó en pausa) */
   try{navigator.permissions&&navigator.permissions.query({name:'microphone'}).then(p=>{if(p.state==='granted')micOn()}).catch(()=>{})}catch(e){}
   setInterval(vuEstado,1000);
+  window.addEventListener('online',()=>{NUBE.err='';nubeSubir()});
+  setInterval(()=>{if(nubeFalta())nubeSubir()},20000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&nubeFalta())setTimeout(nubeSubir,800)});
   wakeOn();
   load();
   const viejo=S.act;
