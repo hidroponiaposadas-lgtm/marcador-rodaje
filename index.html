@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0d10">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -11,83 +11,119 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Marcador de Rodaje · CRUDO</title>
 <style>
-/* Paleta en variables: cambiar acá para igualar la estética exacta de CRUDO Suite */
-:root{--bg:#0b0d10;--card:#13171c;--line:#222833;--tx:#e8ebf0;--mut:#7d8696;--ac:#ff7a1a;--ok:#2fbf71;--bad:#e5484d;--blue:#4aa3ff;--warn:#f5c542;--mono:ui-monospace,SFMono-Regular,Consolas,monospace}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* Estética de CRUDO Suite: fondo cálido oscuro, acento «ember». Cambiar acá la paleta. */
+:root{--bg:#0c0a09;--bg1:#141110;--card:#1a1614;--card2:#221d1a;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.16);
+  --tx:#f1ede6;--tx2:#d6d0c8;--mut:#a8a098;--mut2:#7d756e;--ac:#ff7a2f;--ac2:#e2561c;--ac3:#ffb07a;--acRGB:255,122,47;
+  --ok:#5fd38a;--okRGB:95,211,138;--bad:#ff4d3d;--blue:#5aa9ff;--warn:#f2b441;--r:14px;--r2:18px;
+  --mono:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--vu:22px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 html,body{margin:0}
-body{background:var(--bg);color:var(--tx);font:15px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:max(8px,env(safe-area-inset-top)) 10px calc(64px + env(safe-area-inset-bottom));max-width:560px;margin:0 auto}
-.top{display:flex;justify-content:space-between;align-items:center;color:var(--mut);font-size:12px;letter-spacing:.6px}
-.top b{color:var(--ac)}
-#clock{font:700 44px/1 var(--mono);text-align:center;margin:6px 0 8px;letter-spacing:1px}
+body{background:radial-gradient(120% 60% at 50% -10%,rgba(var(--acRGB),.10),transparent 60%),var(--bg);background-attachment:fixed;color:var(--tx);
+  font:15px/1.4 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",system-ui,sans-serif;letter-spacing:-.01em;
+  padding:max(10px,env(safe-area-inset-top)) calc(var(--vu) + 16px + env(safe-area-inset-right)) calc(78px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+  max-width:600px;margin:0 auto;-webkit-user-select:none;user-select:none;overscroll-behavior:none}
+input,select,textarea{-webkit-user-select:text;user-select:text}
+.top{display:flex;justify-content:space-between;align-items:center;color:var(--mut);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.top b{color:var(--ac);font-weight:900;letter-spacing:.18em}
+#prg{font-family:var(--mono);letter-spacing:.02em;text-transform:none;color:var(--mut2)}
+#clock{font:700 46px/1 var(--mono);text-align:center;margin:10px 0 12px;letter-spacing:.02em;font-variant-numeric:tabular-nums;color:var(--tx2)}
 button,select,input{font:inherit;color:var(--tx)}
-button{background:#1a2029;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-weight:600}
-button:active{transform:scale(.97)}
-select,input{background:#0e1216;border:1px solid var(--line);border-radius:10px;padding:9px;width:100%}
-.ctl{display:grid;grid-template-columns:76px 76px minmax(0,1fr);gap:8px;margin-top:8px}
-.ctl #go{font-size:20px;padding:20px 6px;white-space:normal;line-height:1.1;min-width:0}
-.ctl select{font-size:20px;font-weight:800;padding:0 6px;border-radius:14px}
-.ctl label{display:flex;flex-direction:column;gap:2px;font-size:10px;color:var(--mut);letter-spacing:.6px;font-weight:700}
-.ctl label select{flex:1}
-#go{background:var(--ac);border-color:var(--ac);color:#1a0d00;font-size:24px;font-weight:800;padding:24px 12px;border-radius:14px;letter-spacing:.5px}
-#go.esp{background:#2a1d10;color:var(--ac);border-color:var(--ac)}
-#go.rec{background:var(--bad);border-color:var(--bad);color:#fff}
-#estado{margin:8px 0 0;min-height:0}
-.esp-box{display:flex;align-items:center;gap:10px;justify-content:space-between}
-.dots{display:flex;gap:8px}
-.dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--mut)}
-.dot.on{background:var(--ac);border-color:var(--ac)}
-#meter{height:5px;background:#1a2029;border-radius:9px;overflow:hidden;margin-top:8px}
-#meter i{display:block;height:100%;width:0;background:var(--ok)}
-#cron{font:800 54px/1 var(--mono);text-align:center;color:var(--ok)}
-.sub{text-align:center;color:var(--mut);font-size:12px;margin-top:2px}
-#tl{position:relative;height:84px;margin:10px 0 8px;background:#0e1216;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+button{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-weight:650;transition:transform .08s,background .15s,border-color .15s;cursor:pointer}
+button:active{transform:scale(.96)}
+select,input{background:var(--bg1);border:1px solid var(--line2);border-radius:12px;padding:10px;width:100%;font-size:16px}
+input:focus,select:focus{outline:none;border-color:rgba(var(--acRGB),.6);box-shadow:0 0 0 3px rgba(var(--acRGB),.15)}
+.ctl{display:grid;grid-template-columns:78px 78px minmax(0,1fr);gap:10px;margin-top:10px}
+.ctl label{display:flex;flex-direction:column;gap:4px;font-size:10px;color:var(--mut);letter-spacing:.14em;font-weight:800}
+.ctl label select{flex:1;font-size:24px;font-weight:800;padding:0 8px;border-radius:var(--r);text-align:center;text-align-last:center;background:var(--card);-webkit-appearance:none;appearance:none}
+.ctl select:disabled{opacity:.55}
+#go{background:linear-gradient(180deg,var(--ac),var(--ac2));border:0;color:#1d0b00;font-size:22px;font-weight:900;padding:22px 10px;border-radius:var(--r2);
+  letter-spacing:.06em;white-space:normal;line-height:1.1;min-width:0;box-shadow:0 0 0 1px rgba(var(--acRGB),.35),0 10px 30px rgba(var(--acRGB),.28)}
+#go.esp{background:rgba(var(--acRGB),.12);color:var(--ac3);box-shadow:inset 0 0 0 2px rgba(var(--acRGB),.6)}
+#go.rec{background:linear-gradient(180deg,#ff5a49,#d93a2b);color:#fff;box-shadow:0 0 0 1px rgba(255,77,61,.4),0 10px 30px rgba(255,77,61,.3);animation:latido 1.6s ease-in-out infinite}
+@keyframes latido{50%{box-shadow:0 0 0 1px rgba(255,77,61,.5),0 10px 40px rgba(255,77,61,.5)}}
+#estado{margin:10px 0 0}
+.esp-box{display:flex;align-items:center;gap:12px;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+.esp-box .sub{text-align:left}
+.dots{display:flex;gap:9px}
+.dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--mut2);transition:.15s}
+.dot.on{background:var(--ac);border-color:var(--ac);box-shadow:0 0 12px rgba(var(--acRGB),.7)}
+#man{white-space:nowrap;font-size:13px}
+#meter{height:6px;background:var(--bg1);border-radius:9px;overflow:hidden;margin-top:10px;border:1px solid var(--line)}
+#meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--ok),var(--warn),var(--bad))}
+#cron{font:800 60px/1 var(--mono);text-align:center;color:var(--ok);font-variant-numeric:tabular-nums;text-shadow:0 0 30px rgba(var(--okRGB),.25)}
+.sub{text-align:center;color:var(--mut);font-size:12px;margin-top:4px}
+#tl{position:relative;height:88px;margin:12px 0 10px;background:var(--bg1);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 #wf{position:absolute;inset:0;width:100%;height:100%}
 #mks{position:absolute;inset:0}
-#ph{position:absolute;top:0;bottom:0;width:2px;background:var(--ac);z-index:2}
-.tk{position:absolute;top:0;bottom:0;width:3px;margin-left:-1px;opacity:.9;z-index:1}
-#alerta{background:var(--bad);color:#fff;font-weight:700;padding:10px;border-radius:10px;margin:8px 0;text-align:center}
-#aviso{background:#2a2410;border:1px solid var(--warn);color:var(--warn);padding:8px 10px;border-radius:10px;margin:8px 0;font-size:13px;font-weight:600}
-#rescate{background:#10261a;border:1px solid var(--ok);padding:10px;border-radius:10px;margin:8px 0}
-#rescate .row{display:flex;gap:8px;margin-top:8px}#rescate .row button{flex:1;padding:12px}
-#camShare button.ya,#camShare button.gris{background:#1a2029;color:var(--tx);border:1px solid var(--line);font-weight:600}
-#camShare{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
-#camShare button{flex:1 1 auto;padding:14px 10px;font-size:15px;background:var(--ok);color:#04210f;border:0;border-radius:12px;font-weight:800}
+#ph{position:absolute;top:0;bottom:0;width:2px;background:var(--ac);z-index:2;box-shadow:0 0 8px rgba(var(--acRGB),.8)}
+.tk{position:absolute;top:0;bottom:0;width:3px;margin-left:-1px;opacity:.95;z-index:1;border-radius:2px}
+#alerta{background:rgba(255,77,61,.14);border:1px solid rgba(255,77,61,.6);color:#ffb3aa;font-weight:700;padding:11px;border-radius:var(--r);margin:10px 0;text-align:center}
+#aviso{background:rgba(242,180,65,.10);border:1px solid rgba(242,180,65,.55);color:var(--warn);padding:10px 12px;border-radius:var(--r);margin:8px 0;font-size:13px;font-weight:650}
+#rescate{background:rgba(var(--okRGB),.08);border:1px solid rgba(var(--okRGB),.5);padding:12px;border-radius:var(--r);margin:10px 0}
+#rescate .row{display:flex;gap:8px;margin-top:10px}#rescate .row button{flex:1;padding:12px}
+#camShare{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+#camShare button{flex:1 1 auto;padding:14px 10px;font-size:15px;background:linear-gradient(180deg,#6ee39a,#45b873);color:#04210f;border:0;border-radius:var(--r);font-weight:800}
+#camShare button.ya,#camShare button.gris{background:var(--card2);color:var(--tx);border:1px solid var(--line);font-weight:650}
 #quick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-#quick button{padding:26px 6px;font-size:20px;font-weight:800;border-radius:14px;border:0;color:#10131a}
-#quick [data-mk=CORTAR_FRASE]{background:#ff7a1a}
-#quick [data-mk=TAPAR_INSERT]{background:#4aa3ff}
-#quick [data-mk=DESTACAR]{background:#f5c542}
-#quick [data-mk=NOTA]{background:#9aa3b2}
-#quick #back{grid-column:1/3;padding:14px;font-size:17px;background:#1a2029;color:var(--tx);border:1px solid var(--line)}
-#quick #back.sel{border-color:var(--ac);color:var(--ac)}
-.mk{display:grid;grid-template-columns:52px 1fr auto;gap:6px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:13px}
+#quick button{padding:24px 6px;font-size:19px;font-weight:850;border-radius:var(--r2);border:0;color:#14100d;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18),0 6px 18px rgba(0,0,0,.3)}
+#quick [data-mk=CORTAR_FRASE]{background:linear-gradient(180deg,#ff8e4d,#f06a22)}
+#quick [data-mk=TAPAR_INSERT]{background:linear-gradient(180deg,#7dbbff,#4a96ee)}
+#quick [data-mk=DESTACAR]{background:linear-gradient(180deg,#ffd36b,#f0b23a)}
+#quick [data-mk=NOTA]{background:linear-gradient(180deg,#bdb6ad,#958d84)}
+#quick #back{grid-column:1/3;padding:14px;font-size:16px;background:var(--card2);color:var(--tx2);border:1px solid var(--line);box-shadow:none}
+#quick #back.sel{border-color:var(--ac);color:var(--ac3);background:rgba(var(--acRGB),.12)}
+#mkl{margin-top:8px}
+.mk{display:grid;grid-template-columns:56px 1fr auto;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
 .mk .t{font:12px var(--mono);color:var(--mut)}
-.mk input{padding:7px}
-.mk .x{padding:5px 9px;color:var(--bad)}
-.chip{font-size:11px;font-weight:700;padding:1px 6px;border-radius:99px;margin-right:4px;color:#10131a}
-h2{font-size:12px;margin:16px 0 4px;color:var(--mut);letter-spacing:.8px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
-.reg{display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:13px}
-.reg .n{font-weight:700}.reg .m{color:var(--mut);font-size:11px}
-.reg button{padding:4px 9px}
-.reg .d{color:var(--bad)}
+.mk input{padding:8px}
+.mk .x{padding:6px 10px;color:var(--bad);background:transparent}
+.chip{font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px;margin-right:4px;color:#14100d;white-space:nowrap}
+h2{font-size:11px;margin:22px 0 6px;color:var(--mut);letter-spacing:.16em;font-weight:800;display:flex;justify-content:space-between;align-items:center}
+#reg{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:2px 12px}
+.reg{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.reg:first-child{border-top:0}
+.reg .n{font-weight:750}.reg .m{color:var(--mut);font-size:11.5px;margin-top:2px}
+.reg button{padding:6px 11px}
+.reg .d{color:var(--bad);background:transparent}
 .reg.no{opacity:.45}
-.reg .a{color:var(--ok)}
-details{margin-top:12px;color:var(--mut)}
-details summary{cursor:pointer;font-size:12px;letter-spacing:.6px}
-.f{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
-.f label{font-size:11px;color:var(--mut);display:block;margin-bottom:2px}
-.bar{position:fixed;left:0;right:0;bottom:0;background:#0b0d10ee;border-top:1px solid var(--line);padding:8px 10px calc(8px + env(safe-area-inset-bottom));display:flex;gap:8px;max-width:560px;margin:0 auto}
+.reg .a{color:var(--ok);border-color:rgba(var(--okRGB),.4)}
+details{margin-top:16px;color:var(--mut);background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+details summary{cursor:pointer;font-size:11px;letter-spacing:.16em;font-weight:800;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary::after{content:" ▾";color:var(--mut2)}
+.f{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.f label{font-size:11px;color:var(--mut);display:block;margin-bottom:4px}
+input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--ac);height:30px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:rgba(12,10,9,.86);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);
+  padding:10px 12px calc(10px + env(safe-area-inset-bottom));display:flex;gap:10px;max-width:600px;margin:0 auto;z-index:8}
 .bar button{flex:1}
-.bar .ex{background:var(--ac);color:#1a0d00;border-color:var(--ac);flex:2}
-#ok{position:fixed;inset:0;background:var(--ok);color:#04210f;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:20;text-align:center;padding:20px}
-#ok b{font-size:38px;letter-spacing:1px}
+.bar .ex{background:linear-gradient(180deg,var(--ac),var(--ac2));color:#1d0b00;border:0;flex:2;font-weight:850;letter-spacing:.02em}
+#ok{position:fixed;inset:0;background:radial-gradient(circle at 50% 40%,#6ee39a,#2f9c5c);color:#04210f;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:20;text-align:center;padding:20px}
+#ok b{font-size:38px;letter-spacing:.04em}
 #ok span{font:600 18px var(--mono);margin-top:10px}
-#toast{position:fixed;left:50%;top:10px;transform:translateX(-50%);background:#000;border:1px solid var(--ac);padding:8px 14px;border-radius:10px;z-index:30;display:none;max-width:90%;font-size:14px}
+#toast{position:fixed;left:50%;top:max(12px,env(safe-area-inset-top));transform:translateX(-50%);background:rgba(20,17,16,.95);border:1px solid rgba(var(--acRGB),.6);padding:10px 16px;border-radius:12px;z-index:30;display:none;max-width:88%;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
 .hide{display:none!important}
+/* ----- vúmetro al costado: siempre a la vista, tocalo para activar el micrófono ----- */
+#vu{position:fixed;z-index:9;right:max(6px,env(safe-area-inset-right));top:calc(max(10px,env(safe-area-inset-top)) + 60px);bottom:calc(84px + env(safe-area-inset-bottom));
+  width:var(--vu);padding:0;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:6px}
+#vu .vt{position:relative;flex:1;width:100%;border-radius:99px;background:var(--bg1);border:1px solid var(--line2);overflow:hidden}
+#vuLvl{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(0deg,var(--ok) 0%,var(--ok) 55%,var(--warn) 78%,var(--bad) 100%);background-size:100% var(--vuH,300px);background-position:bottom;transition:height .05s linear}
+#vuPk{position:absolute;left:2px;right:2px;height:2px;bottom:0;background:var(--tx);border-radius:2px;opacity:.85}
+#vuUm{position:absolute;left:-2px;right:-2px;height:0;border-top:2px dashed var(--ac);bottom:50%}
+#vu .vl{font-size:9px;font-weight:900;letter-spacing:.08em;color:var(--mut)}
+#vu .vd{width:9px;height:9px;border-radius:50%;background:var(--mut2)}
+#vu.vivo .vd{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+#vu.err .vd{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+#vu.err .vt{border-color:rgba(255,77,61,.6)}
+#vu.golpe .vt{box-shadow:0 0 0 2px var(--ac),0 0 16px rgba(var(--acRGB),.8)}
+#vu .off{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;font-size:10px;font-weight:800;letter-spacing:.14em;color:var(--mut)}
+#vu.vivo .off{display:none}
 </style>
 </head>
 <body>
 <div id="toast"></div>
+<button id="vu" type="button" aria-label="Vúmetro del micrófono (tocá para activarlo)"><span class="vd"></span><span class="vt"><i id="vuLvl"></i><b id="vuPk"></b><span id="vuUm"></span><span class="off">TOCÁ · MIC</span></span><span class="vl">MIC</span></button>
 <div id="ok"><b>✔ TOMA APROBADA</b><span id="okInfo"></span></div>
 
 <div class="top"><span><b>CRUDO</b> · MARCADOR DE RODAJE</span><span id="prg"></span></div>
@@ -128,7 +164,8 @@ details summary{cursor:pointer;font-size:12px;letter-spacing:.6px}
     <div style="grid-column:1/3"><label>Programa</label><input id="pNom"></div>
     <div style="grid-column:1/3"><label>Sensibilidad de palmadas (más a la izquierda = detecta más suave)</label><input id="umbral" type="range" min="10" max="80" step="5"></div>
     <div id="stInfo" class="sub" style="grid-column:1/3;text-align:left"></div>
-    <button id="probar">Probar micrófono</button>
+    <div class="sub" style="grid-column:1/3;text-align:left">La línea punteada del vúmetro (MIC, a la derecha) es la sensibilidad: una palmada tiene que pasarla. Versión 3.1</div>
+    <button id="probar">Probar palmadas</button>
     <button id="borrar" style="color:var(--bad)">Borrar día</button>
   </div>
 </details>
@@ -196,36 +233,87 @@ function alerta(t){const e=$('alerta');if(!e)return;e.textContent=t||'';e.classL
 let WLP=false;async function wakeOn(){if(WLP)return;WLP=true;try{if(navigator.wakeLock&&!WL){WL=await navigator.wakeLock.request("screen");WL.addEventListener('release',()=>{WL=null})}}catch(e){}WLP=false}
 function wakeOff(){/* la pantalla queda encendida todo el tiempo que la app esté abierta */}
 
-async function micOn(){
-  if(AN){try{if(AC.state==='suspended')await AC.resume()}catch(e){}return true}
+/* iPhone: el audio solo arranca si se crea/reanuda DENTRO del toque. Esto corre síncrono en cada toque,
+   antes de cualquier «await» (antes se creaba después de pedir el permiso y quedaba en pausa: sin medidor ni palmadas). */
+function audioGesto(){
   try{
+    if(!AC||AC.state==='closed')AC=new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state!=='running')AC.resume().catch(()=>{});
+  }catch(e){}
+}
+let MICERR='',SRC=null,SIL=0,REINT=0;
+function micVivo(){return !!(ST&&ST.getAudioTracks().some(t=>t.readyState==='live'))}
+function conectar(){
+  try{if(SRC)SRC.disconnect()}catch(e){}
+  if(!AC||AC.state==='closed')AC=new (window.AudioContext||window.webkitAudioContext)();
+  SRC=AC.createMediaStreamSource(ST);AN=AC.createAnalyser();AN.fftSize=1024;SRC.connect(AN);
+  AC.onstatechange=()=>{vuEstado();if(!S.act)return;if(AC.state==='running')alerta('');else alerta('⚠ El audio quedó en pausa: tocá el vúmetro (MIC) para reactivarlo')};
+}
+async function micOn(){
+  if(AN&&micVivo()){try{if(AC.state!=='running')await AC.resume()}catch(e){}bucle();vuEstado();return true}
+  if(!window.isSecureContext){MICERR='La app no está abierta desde https: abrila desde el ícono de inicio';vuEstado();return false}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){MICERR='Este navegador no deja usar el micrófono';vuEstado();return false}
+  try{
+    if(ST)try{ST.getTracks().forEach(t=>t.stop())}catch(e){}
     ST=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}});
-    AC=new (window.AudioContext||window.webkitAudioContext)();
-    const src=AC.createMediaStreamSource(ST);AN=AC.createAnalyser();AN.fftSize=1024;src.connect(AN);
-    if(AC.state==='suspended')await AC.resume();
-    AC.onstatechange=()=>{if(!S.act)return;if(AC.state==='running')alerta('');else alerta('⚠ El audio quedó en pausa por el sistema')};
+    conectar();
+    if(AC.state!=='running'){try{await AC.resume()}catch(e){}}
     ST.getAudioTracks().forEach(tr=>{
-      tr.onended=()=>{if(LOOP){clearInterval(LOOP);LOOP=null}AN=null;ST=null;if(S.act)alerta('⚠ El micrófono se cortó. Tocá FIN TOMA y empezá otra toma.')};
-      tr.onmute=()=>{if(S.act)alerta('⚠ Micrófono silenciado por el sistema (llamada u otra app)')};
-      tr.onunmute=()=>{if(S.act)alerta('')};
+      tr.onended=()=>{AN=null;vuEstado();if(S.act)alerta('⚠ El micrófono se cortó: tocá el vúmetro (MIC) para reconectarlo')};
+      tr.onmute=()=>{vuEstado();if(S.act)alerta('⚠ Micrófono silenciado por el sistema (llamada u otra app)')};
+      tr.onunmute=()=>{vuEstado();if(S.act)alerta('')};
     });
-    return true;
-  }catch(e){return false}
+    MICERR='';SIL=0;bucle();vuEstado();return true;
+  }catch(e){
+    MICERR=e&&e.name==='NotAllowedError'?'Sin permiso de micrófono: Ajustes › Safari › Micrófono › Permitir (o «aA» › Ajustes del sitio web)':
+      e&&e.name==='NotFoundError'?'No encuentro micrófono en este equipo':
+      e&&e.name==='NotReadableError'?'Otra app está usando el micrófono (llamada, grabadora…)':'Micrófono: '+((e&&(e.message||e.name))||'error');
+    vuEstado();return false;
+  }
+}
+/* si el micrófono queda mudo (todo ceros) con la pista viva, iOS desconectó el audio: se reconecta solo */
+function reconectar(){
+  if(!micVivo()||REINT>3)return;
+  REINT++;try{if(AC)AC.close()}catch(e){}AC=null;conectar();try{AC.resume()}catch(e){}SIL=0;
+  if(S.act)alerta('⚠ Reconecté el micrófono: si el vúmetro no se mueve, tocalo');
+}
+/* ---------- vúmetro ---------- */
+const VU={pk:0,pkT:0,ult:0,golpe:0,lv:0,t:0};
+function vuEstado(){
+  const v=$('vu');if(!v)return;
+  const vivo=!!(AN&&micVivo()&&AC&&AC.state==='running');
+  v.classList.toggle('vivo',vivo);v.classList.toggle('err',!vivo&&!!MICERR);
+  v.title=vivo?'Micrófono funcionando':(MICERR||'Tocá para activar el micrófono');
+  const u=$('vuUm');if(u)u.style.bottom=(Math.sqrt(S.umbral)*100)+'%';
+  if(!vivo){const l=$('vuLvl');if(l)l.style.height='0';const k=$('vuPk');if(k)k.style.bottom='0'}
+}
+function vuPintar(p,now){
+  VU.lv=Math.max(p,VU.lv*Math.pow(.5,Math.max(0,now-(VU.t||now))/140));VU.t=now;   /* sube al instante, baja suave */
+  if(p>VU.pk||now-VU.pkT>1200){VU.pk=p;VU.pkT=now}
+  if(now-VU.ult<33)return;VU.ult=now;
+  const l=$('vuLvl'),k=$('vuPk'),v=$('vu');if(!l)return;
+  const h=Math.min(1,Math.sqrt(VU.lv))*100;l.style.height=h+'%';
+  const t=v.querySelector('.vt');if(t)l.style.setProperty('--vuH',t.clientHeight+'px');
+  k.style.bottom='calc('+Math.min(1,Math.sqrt(VU.pk))*100+'% - 2px)';
+  if(p>S.umbral){VU.golpe=now;v.classList.add('golpe')}else if(now-VU.golpe>150)v.classList.remove('golpe');
 }
 /* Un solo bucle: junta picos para la waveform durante toda la toma y, si hay CB, detecta las 3 palmadas */
 function bucle(){
   if(LOOP||!AN)return;
   const buf=new Float32Array(1024);
   LOOP=setInterval(()=>{
+    if(!AN){clearInterval(LOOP);LOOP=null;return}
     AN.getFloatTimeDomainData(buf);
     let p=0,s=0;for(let i=0;i<buf.length;i++){const a=Math.abs(buf[i]);if(a>p)p=a;s+=a*a}
     const now=Date.now();
+    vuPintar(p,now);
+    if(p===0&&AC&&AC.state==='running'&&micVivo()&&!ST.getAudioTracks()[0].muted){if(!SIL)SIL=now;else if(now-SIL>2500)reconectar()}else if(p>0){SIL=0;REINT=0}
     const m=$('mtr');if(m)m.style.width=Math.min(100,p*100)+'%';
     if(PK0){const i=Math.floor((now-PK0)/50);if(i>=0&&i<400000&&!(PK[i]>=p))PK[i]=p}
     if(CB){const r=Det.feed(p,Math.sqrt(s/buf.length),now,S.umbral);pintarDots();if(r){const f=CB;CB=null;f(r)}}
   },8);
 }
-function parar(){if(LOOP){clearInterval(LOOP);LOOP=null}CB=null;PK0=0}
+function parar(){CB=null;PK0=0}   /* el bucle sigue: el vúmetro queda andando mientras el micrófono esté abierto */
 function recStart(){
   try{
     const tipos=['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];
@@ -470,6 +558,8 @@ async function copiar(){try{await navigator.clipboard.writeText(JSON.stringify(b
 if(typeof document!=='undefined'&&$('go')){
   document.addEventListener('click',e=>{
     const b=e.target.closest('button');if(!b)return;
+    if(b.id==='go'||b.id==='probar'||b.id==='vu')audioGesto();
+    if(b.id==='vu'){micOn().then(ok=>toast(ok?'🎙 Micrófono funcionando: hablá o aplaudí y mirá la barra':MICERR));return}
     if(b.id==='go'){if(!S.act)iniciar();else if(S.act.fase==='esperando')cancelar();else finalizar();return}
     if(b.id==='man')return manual();
     if(b.dataset.mk)return addMk(b.dataset.mk);
@@ -491,7 +581,7 @@ if(typeof document!=='undefined'&&$('go')){
     if(b.id==='probar'){
       if(S.act)return toast('Terminá la toma primero');
       micOn().then(ok=>{if(!ok)return toast('No hay permiso de micrófono');
-        if(LOOP){parar();return toast('Prueba detenida')}
+        if(CB){parar();return toast('Prueba detenida')}
         toast('Aplaudí 3 veces…');Det.reset();CB=()=>{parar();toast('✔ 3 palmadas detectadas')};bucle()});return}
   });
   document.addEventListener('change',e=>{
@@ -507,7 +597,7 @@ if(typeof document!=='undefined'&&$('go')){
     if(t.dataset.acc&&S.act){const m=S.act.mk.find(x=>x.id==t.dataset.acc);if(m){m.accion=t.value;save()}}
   });
   document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden)wakeOn();
+    if(!document.hidden){wakeOn();if(AN&&!micVivo()){AN=null;micOn()}else{try{if(AC&&AC.state!=='running')AC.resume()}catch(e){}}vuEstado()}
     if(!S.act)return;
     if(document.hidden){S.act.oculto=Date.now();save();return}
     wakeOn();
@@ -527,11 +617,18 @@ if(typeof document!=='undefined'&&$('go')){
     if(t.id==='pNum')S.prog.num=t.value.trim();
     else if(t.id==='pFecha')S.prog.fecha=t.value;
     else if(t.id==='pNom')S.prog.nom=t.value;
-    else if(t.id==='umbral')S.umbral=(+t.value||35)/100;
+    else if(t.id==='umbral'){S.umbral=(+t.value||35)/100;vuEstado()}
     else return;
     save();$('prg').textContent=(S.prog.num?'Nº '+S.prog.num+' · ':'')+S.prog.fecha;
   });
-  ['pointerdown','touchstart','click'].forEach(ev=>document.addEventListener(ev,()=>{if(!WL)wakeOn()},{passive:true}));
+  ['pointerdown','touchstart','click'].forEach(ev=>document.addEventListener(ev,()=>{if(!WL)wakeOn();if(AC&&AC.state!=='running')audioGesto()},{passive:true}));
+  /* sin zoom: ni doble toque ni pellizco */
+  document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
+  ['gesturestart','gesturechange'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
+  let ultToque=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-ultToque<300&&!e.target.closest('input,select,textarea'))e.preventDefault();ultToque=n},{passive:false});
+  /* si el permiso ya estaba dado, el vúmetro arranca solo (el primer toque lo reanuda si iOS lo dejó en pausa) */
+  try{navigator.permissions&&navigator.permissions.query({name:'microphone'}).then(p=>{if(p.state==='granted')micOn()}).catch(()=>{})}catch(e){}
+  setInterval(vuEstado,1000);
   wakeOn();
   load();
   const viejo=S.act;
