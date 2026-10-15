@@ -170,7 +170,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--a
     <div style="grid-column:1/3"><label>Programa</label><input id="pNom"></div>
     <div style="grid-column:1/3"><label>Sensibilidad de palmadas (más a la izquierda = detecta más suave)</label><input id="umbral" type="range" min="10" max="80" step="5"></div>
     <div id="stInfo" class="sub" style="grid-column:1/3;text-align:left"></div>
-    <div class="sub" style="grid-column:1/3;text-align:left">La línea punteada del vúmetro (MIC, a la derecha) es la sensibilidad: una palmada tiene que pasarla. Versión 3.2</div>
+    <div class="sub" style="grid-column:1/3;text-align:left">La línea punteada del vúmetro (MIC, a la derecha) es la sensibilidad: una palmada tiene que pasarla. Versión 3.3</div>
     <div class="nb"><div class="t">SUBIDA AUTOMÁTICA AL DRIVE (CRUDO › cola)</div>
       <div class="sub" style="text-align:left">Cada toma se sube sola al terminarla (tomas + audio). Sin señal queda pendiente y se sube cuando vuelve internet.</div></div>
     <div style="grid-column:1/3"><label>Enlace del script (termina en /exec)</label><input id="nUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
@@ -358,8 +358,16 @@ function recCancel(){if(REC&&REC.state!=='inactive'){REC.onstop=null;try{REC.sto
 
 /* ---------- Flujo de toma ---------- */
 let TICK=null;
+/* la fecha del programa sigue al día: si no hay tomas de otro día, pasa sola a hoy (antes quedaba la de ayer) */
+function fechaAlDia(){
+  if(S.prog.fecha===hoy())return false;
+  if(!S.tomas.every(t=>String(t.inicio||'').slice(0,10)===hoy()))return false;
+  if(S.nubeHash&&!S.nubeNombre)S.nubeNombre=nombreArchivo();   /* lo ya subido con la fecha vieja: se borra en la próxima subida */
+  S.prog.fecha=hoy();save();return true;
+}
 async function iniciar(){
   if(!S.esc){toast('Elegí la ESCENA');$('esc').focus();return}
+  if(fechaAlDia())toast('Fecha del programa: hoy');
   if(S.act)return;
   S.act={esc:S.esc,cam:S.cam,fase:'esperando',pulsado:Date.now(),claps:[],t0:null,metodo:null,mk:[]};
   alerta('');wakeOn();render();
@@ -405,8 +413,12 @@ function tick(){
   document.querySelectorAll('.tk').forEach(e=>{e.style.left=(+e.dataset.t/win*100)+'%'});
   dibujar(t,win);
 }
+let ULTMK={tipo:'',at:0};
 function addMk(tipo){
   if(!S.act||S.act.fase!=='grabando')return;
+  const ya=Date.now();                                   /* el mismo botón dos veces en menos de medio segundo = un solo marcador */
+  if(ULTMK.tipo===tipo&&ya-ULTMK.at<500)return;
+  ULTMK={tipo,at:ya};
   let t=secs()-(S.back?5:0);if(t<0)t=0;S.back=false;
   S.act.mk.push({id:S.seq++,t:+t.toFixed(2),tipo,detalle:'',accion:tipo==='CORTAR_FRASE'?'quitar':undefined});
   try{navigator.vibrate&&navigator.vibrate(40)}catch(e){}
@@ -490,7 +502,11 @@ async function nubeSubir(){
       t.subida=true;save();render();
     }
     const h=hashTxt(datosJson());                                             // después el archivo de tomas (se reemplaza)
-    if(S.tomas.length&&S.nubeHash!==h){await nubePost({archivos:[{nombre:nombreArchivo(),tipo:'application/json',texto:JSON.stringify(build(),null,2)}]});S.nubeHash=h;save()}
+    if(S.tomas.length&&S.nubeHash!==h){
+      const nom=nombreArchivo(),viejo=S.nubeNombre&&S.nubeNombre!==nom?[S.nubeNombre]:[];   /* cambió fecha/Nº: se borra el archivo viejo */
+      await nubePost({archivos:[{nombre:nom,tipo:'application/json',texto:JSON.stringify(build(),null,2)}],borrar:viejo});
+      S.nubeHash=h;S.nubeNombre=nom;save();
+    }
     NUBE.err='';NUBE.ult=Date.now();
   }catch(e){NUBE.err=(e&&e.message)||'no se pudo subir'}
   NUBE.busy=false;pintarNube();render();
@@ -700,6 +716,7 @@ if(typeof document!=='undefined'&&$('go')){
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&nubeFalta())setTimeout(nubeSubir,800)});
   wakeOn();
   load();
+  fechaAlDia();
   const viejo=S.act;
   if(viejo){S.act=null;if(viejo.t0)S.rescate=viejo;save()}
   render();
